@@ -2,6 +2,7 @@ import pygame
 import json
 from sys import exit
 from random import randint
+import math
 
 class Camara(pygame.sprite.Sprite):
     def __init__(self, limite_ancho, limite_alto):
@@ -39,17 +40,19 @@ class Camara(pygame.sprite.Sprite):
             self.rect.y += self.velocidad
         
         self.controlar_bordes()
-
+          
     def update(self):
         self.movimiento()
 
 class Astro(pygame.sprite.Sprite):
     def __init__(self, astro):
         super().__init__()
-        radio = 50
-        self.image = pygame.Surface((radio * 2, radio * 2), pygame.SRCALPHA)
-        rect = ''
+        self.nombre = astro["nombre"]
+        self.image = pygame.image.load("assets/Graphics/star.jpeg").convert_alpha()
+        self.seleccionado = False
+        rect = '' 
         encontrado = False
+        position = (0,0)
         while not encontrado:
             random_y = randint(0, alto)
             random_x = randint(0, ancho)
@@ -62,17 +65,31 @@ class Astro(pygame.sprite.Sprite):
                     break
             if not colision:
                 encontrado = True
-        
         self.rect = rect
-        color_borde = (255, 0, 0)
-        pygame.draw.circle(self.image, color_borde, (radio, radio), radio, 3)
-        pygame.draw.line(self.image, color_borde, (45, 50), (55, 50), 2)
-        pygame.draw.line(self.image, color_borde, (50, 45), (50, 55), 2)
+        self.image_original = self.image.copy()
+        self.image.set_alpha(0)
+        self.radio_deteccion = 150
+    
+    def update_visual(self, pos_visor):
+        distancia = math.dist(self.rect.center, pos_visor)
+
+        if distancia < self.radio_deteccion:
+            proporcion = 1 - (distancia / self.radio_deteccion)            
+            nuevo_alpha = int(proporcion * 255)
+            self.image.set_alpha(nuevo_alpha)
+            
+            if proporcion > 0.8:
+                self.seleccionado = True 
+            else:
+                False
+        else:
+            self.image.set_alpha(0)
+            self.seleccionado = False
     
 
     def update(self):
         pass
-
+        
 
 def dibujar_controles():
     ancla = (ancho / 2.5, alto / 1.2)
@@ -91,7 +108,6 @@ def dibujar_controles():
     pantalla.blit(texto_mov, texto_mov_rect)
     pantalla.blit(texto_inicio, texto_inicio_rect)
     pantalla.blit(texto_foto, texto_foto_rect)
-
 
 def mostrar_menu():
     pantalla.fill((0,0,0))
@@ -114,10 +130,17 @@ def mostrar_menu():
     pantalla.blit(scores_title, scores_title_rect)
     dibujar_controles()
 
-def collision():    
+def tomar_foto():    
     colisiones = pygame.sprite.spritecollide(camara.sprite, astros_grupo, False)
     if colisiones:
         colisiones[0].kill()
+
+def colision():
+        colisiones = pygame.sprite.spritecollide(camara.sprite, astros_grupo, False)
+        if colisiones:
+            return colisiones[0]
+        else:
+            return None
 
 pygame.init()
 ancho = 1280
@@ -169,6 +192,8 @@ with open("data/astros.json", "r") as f:
     for item in datos["astros"]:
         astros.append(item)
 
+astro_en_foco = None
+astro_actual = None
 
 while True:
     for event in pygame.event.get():
@@ -189,16 +214,32 @@ while True:
                 if fotos <= 0:
                     estado_actual = ESTADO_MENU
                     fotos = 5
-                collision()
+                tomar_foto()
 
     if estado_actual == 'menu':
         mostrar_menu()
     
     if estado_actual == 'jugando':
-        pantalla.fill((120,0,140))
+        pantalla.fill("#0c1a34")
         camara.draw(pantalla)
         camara.update()
-        astros_grupo.draw(pantalla)
 
+        pos_v = camara.sprite.rect.center
+        for astro in astros_grupo:
+            astro.update_visual(pos_v)
+        
+        astros_grupo.draw(pantalla)
+        astro_actual = colision()
+
+        # if astro_actual != astro_en_foco:   
+        #     if astro_en_foco is not None:
+        #         astro_en_foco.seleccionado = False
+            
+        #     if astro_actual is not None:
+        #         astro_actual.seleccionado = True
+        #         print(f"Enfocando: {astro_actual.nombre}")
+        #     astro_en_foco = astro_actual
+        
+        
     pygame.display.update()
     clock.tick(60)
