@@ -1,20 +1,76 @@
 # -*- coding: utf-8 -*-
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 import pygame
 import json
 from sys import exit
 from random import randint
 import math
 
+IMAGENES_ASTROS = {}
+IMAGENES_TECLAS = {}
+
+ASSET_MAP = {
+    "Mercurio": "mercurio.png",
+    "Venus": "venus.png",
+    "Tierra": "tierra.png",
+    "Luna": "luna.png",
+    "Marte": "marte.png",
+    "Júpiter": "jupiter.png",
+    "Saturno": "saturno.png",
+    "Urano": "urano.png",
+    "Neptuno": "neptuno.png",
+    "Estrella": "estrella.png"
+}
+
+ESCALA_MAP = {
+    "Mercurio": 0.5,
+    "Venus": 0.55,
+    "Tierra": 0.55,
+    "Luna": 0.5,
+    "Marte": 0.5,
+    "Júpiter": 0.35,
+    "Saturno": 0.35,
+    "Urano": 0.4,
+    "Neptuno": 0.4
+}
+
+RADIANES_36 = math.pi / 180
+
+def cargar_imagenes():
+    global IMAGENES_ASTROS, IMAGENES_TECLAS
+    
+    for nombre, archivo in ASSET_MAP.items():
+        try:
+            IMAGENES_ASTROS[nombre] = pygame.image.load(f"assets/Graphics/{archivo}").convert_alpha()
+        except:
+            pass
+    
+    IMAGENES_TECLAS = {
+        "up": pygame.image.load("assets/Graphics/Keyboard & Mouse/Default/keyboard_arrow_up.png").convert_alpha(),
+        "down": pygame.image.load("assets/Graphics/Keyboard & Mouse/Default/keyboard_arrow_down.png").convert_alpha(),
+        "left": pygame.image.load("assets/Graphics/Keyboard & Mouse/Default/keyboard_arrow_left.png").convert_alpha(),
+        "right": pygame.image.load("assets/Graphics/Keyboard & Mouse/Default/keyboard_arrow_right.png").convert_alpha(),
+        "space": pygame.image.load("assets/Graphics/Keyboard & Mouse/Double/keyboard_space.png").convert_alpha()
+    }
+
+_ESTRELLA_CACHE = None
+
 def dibujar_estrella(radio, color):
-    superficie = pygame.Surface((radio * 2, radio * 2), pygame.SRCALPHA)
-    puntos = []
-    for i in range(10):
-        ang = (i * 36 - 90) * math.pi / 180
-        r = radio if i % 2 == 0 else radio * 0.4
-        puntos.append((radio + r * math.cos(ang), radio + r * math.sin(ang)))
-    pygame.draw.polygon(superficie, color, puntos)
-    pygame.draw.circle(superficie, (255, 255, 255), (radio, radio), radio // 3)
-    return superficie
+    global _ESTRELLA_CACHE
+    if _ESTRELLA_CACHE is None:
+        superficie = pygame.Surface((radio * 2, radio * 2), pygame.SRCALPHA)
+        puntos = []
+        for i in range(10):
+            ang = (i * 36 - 90) * RADIANES_36
+            r = radio if i % 2 == 0 else radio * 0.4
+            puntos.append((radio + r * math.cos(ang), radio + r * math.sin(ang)))
+        pygame.draw.polygon(superficie, color, puntos)
+        pygame.draw.circle(superficie, (255, 255, 255), (radio, radio), radio // 3)
+        _ESTRELLA_CACHE = superficie
+    return _ESTRELLA_CACHE.copy()
 
 class Camara(pygame.sprite.Sprite):
     def __init__(self, limite_ancho, limite_alto):
@@ -75,59 +131,37 @@ class Astro(pygame.sprite.Sprite):
         super().__init__()
         self.nombre = astro["nombre"]
         
-        asset_map = {
-            "Mercurio": "mercurio.png",
-            "Venus": "venus.png",
-            "Tierra": "tierra.png",
-"Luna": "luna.png",
-            "Marte": "marte.png",
-            "Júpiter": "jupiter.png",
-            "Saturno": "saturno.png",
-            "Urano": "urano.png",
-            "Neptuno": "neptuno.png",
-            "Estrella": "tierra.png"
-        }
-        
-        asset_file = asset_map.get(self.nombre, "tierra.png")
         if self.nombre == "Estrella":
             self.image = dibujar_estrella(40, (255, 255, 200))
         else:
-            self.image = pygame.image.load(f"assets/Graphics/{asset_file}").convert_alpha()
+            img_cargada = IMAGENES_ASTROS.get(self.nombre)
+            if img_cargada:
+                self.image = img_cargada.copy()
+            else:
+                self.image = pygame.Surface((50, 50))
+                self.image.fill((255, 255, 255))
         
-        escala_map = {
-            "Mercurio": 0.5,
-            "Venus": 0.55,
-            "Tierra": 0.55,
-            "Luna": 0.5,
-            "Marte": 0.5,
-            "Júpiter": 0.35,
-            "Saturno": 0.35,
-            "Urano": 0.4,
-            "Neptuno": 0.4
-        }
-        
-        escala = escala_map.get(self.nombre, 0.5)
+        escala = ESCALA_MAP.get(self.nombre, 0.5)
         original_size = self.image.get_size()
         new_size = (int(original_size[0] * escala), int(original_size[1] * escala))
         self.image = pygame.transform.scale(self.image, new_size)
         self.seleccionado = False
-        rect = '' 
-        encontrado = False
-        position = (0,0)
-        while not encontrado:
+        
+        intentos = 0
+        max_intentos = 100
+        while intentos < max_intentos:
             random_y = randint(0, alto)
             random_x = randint(0, ancho)
-            position = (random_x, random_y)
-            rect = self.image.get_rect(center = position)
+            self.rect = self.image.get_rect(center = (random_x, random_y))
             colision = False
             for astro in astros_grupo:
-                if rect.colliderect(astro.rect) or rect.colliderect(camara.sprite.rect):
+                if self.rect.colliderect(astro.rect) or self.rect.colliderect(camara.sprite.rect):
                     colision = True
                     break
             if not colision:
-                encontrado = True
-        self.rect = rect
-        self.image_original = self.image.copy()
+                break
+            intentos += 1
+        
         self.image.set_alpha(0)
         self.radio_deteccion = 150
     
@@ -170,37 +204,46 @@ def dibujar_controles():
     pantalla.blit(texto_inicio, texto_inicio_rect)
     pantalla.blit(texto_foto, texto_foto_rect)
 
+BOTON_SCORES = None
+BOTON_SALIR = None
+
+def crear_boton_scores():
+    global BOTON_SCORES, BOTON_SALIR
+    texto = fuente_normal.render("PUNTOS", False, (255, 255, 255))
+    BOTON_SCORES = {
+        "imagen": texto,
+        "x": ancho - 180,
+        "y": 20,
+        "ancho": 160,
+        "alto": 50
+    }
+    texto_salir = fuente_normal.render("SALIR", False, (255, 255, 255))
+    BOTON_SALIR = {
+        "imagen": texto_salir,
+        "x": ancho - 180,
+        "y": 80,
+        "ancho": 160,
+        "alto": 50
+    }
+
 def mostrar_menu():
     global scores_actualizados
     global album_imagenes
     global texto_info
+    global ultimo_score_posicion
     pantalla.fill((0,0,0))
     
+    crear_boton_scores()
+    
     scores_actualizados = []
-    with open('data/scores.json', 'r') as f:
+    with open('data/scores.json', 'r', encoding='utf-8') as f:
         datos = json.load(f)
         for item in datos["top_scores"]:
             scores_actualizados.append(item)
     
     album_imagenes = {}
-    asset_names = {
-        "Mercurio": "mercurio.png",
-        "Venus": "venus.png",
-        "Tierra": "tierra.png",
-        "Luna": "luna.png",
-        "Marte": "marte.png",
-        "Júpiter": "jupiter.png",
-        "Saturno": "saturno.png",
-        "Urano": "urano.png",
-        "Neptuno": "neptuno.png",
-        "Estrella": "estrella.png"
-    }
-    for nombre, archivo in asset_names.items():
-        try:
-            img = pygame.image.load(f"assets/Graphics/{archivo}").convert_alpha()
-            album_imagenes[nombre] = img
-        except:
-            pass
+    for nombre in IMAGENES_ASTROS:
+        album_imagenes[nombre] = IMAGENES_ASTROS[nombre]
     
     texto_info = {}
     for item in astros:
@@ -211,30 +254,88 @@ def mostrar_menu():
     nombre_rect = nombre.get_rect(center = (ancho / 2, alto / 8))
     pantalla.blit(nombre, nombre_rect)
     
-    titulo_scores = fuente_normal.render("Puntajes", False, (255,0,0))
-    titulo_rect = titulo_scores.get_rect(midleft = (ancho / 1.31 , alto / 7))
-    pantalla.blit(titulo_scores, titulo_rect)
-
-    ancla = (ancho / 1.38, alto / 14)
-    offset = (0, 50)
-    posicion_final = tuple(a + b for a, b in zip(ancla, offset))
-
-    for i, score in enumerate(scores_actualizados):
-        posicion_final = tuple(a + b for a, b in zip(posicion_final, offset))
-        color = (0, 255, 0) if i == score_seleccionado else (255, 0, 0)
-        score_surf = fuente_normal.render(f'{score["nombre"]}: {score["puntos"]}', False, color)
-        score_rect = score_surf.get_rect(topleft = posicion_final)
-        pantalla.blit(score_surf, score_rect)
+    if BOTON_SCORES is None:
+        crear_boton_scores()
+    pygame.draw.rect(pantalla, (100, 100, 200), (BOTON_SCORES["x"], BOTON_SCORES["y"], BOTON_SCORES["ancho"], BOTON_SCORES["alto"]), border_radius=10)
+    pygame.draw.rect(pantalla, (255, 255, 255), (BOTON_SCORES["x"], BOTON_SCORES["y"], BOTON_SCORES["ancho"], BOTON_SCORES["alto"]), 3, border_radius=10)
+    pantalla.blit(BOTON_SCORES["imagen"], (BOTON_SCORES["x"] + 30, BOTON_SCORES["y"] + 10))
     
-    if album_mostrado and score_seleccionado < len(scores_actualizados):
-        album = scores_actualizados[score_seleccionado].get("album", [])
-        if album:
-            pygame.draw.line(pantalla, (100, 100, 150), (50, alto / 4), (ancho - 50, alto / 4), 2)
-            titulo_album = fuente_normal.render(scores_actualizados[score_seleccionado]["nombre"], False, (100, 150, 255))
-            pantalla.blit(titulo_album, (ancho / 2, alto / 4 + 10))
-            mostrar_album(album, album_imagenes, texto_info, offset_y=alto / 4 + 50)
+    pygame.draw.rect(pantalla, (200, 100, 100), (BOTON_SALIR["x"], BOTON_SALIR["y"], BOTON_SALIR["ancho"], BOTON_SALIR["alto"]), border_radius=10)
+    pygame.draw.rect(pantalla, (255, 255, 255), (BOTON_SALIR["x"], BOTON_SALIR["y"], BOTON_SALIR["ancho"], BOTON_SALIR["alto"]), 3, border_radius=10)
+    pantalla.blit(BOTON_SALIR["imagen"], (BOTON_SALIR["x"] + 45, BOTON_SALIR["y"] + 10))
     
     dibujar_controles()
+
+def mostrar_scores():
+    global scores_actualizados, scroll_offset
+    pantalla.fill((10, 10, 30))
+    
+    scores_actualizados = []
+    with open('data/scores.json', 'r', encoding='utf-8') as f:
+        datos = json.load(f)
+        for item in datos["top_scores"]:
+            scores_actualizados.append(item)
+    
+    titulo = fuente_titulo.render("TOP PUNTOS", False, (255, 215, 0))
+    titulo_rect = titulo.get_rect(center = (ancho / 2, 40))
+    pantalla.blit(titulo, titulo_rect)
+    
+    colores_top = [(255, 215, 0), (192, 192, 192), (205, 127, 50)]
+    tamano_top = [50, 40, 35]
+    
+    for i in range(3):
+        if i >= len(scores_actualizados):
+            break
+        score = scores_actualizados[i]
+        veces = score.get("veces", 1)
+        fuente = pygame.font.Font("assets/Fonts/Silkscreen/Silkscreen-Regular.ttf", tamano_top[i])
+        texto = fuente.render(f"{i+1}. {score['nombre']}: {score['puntos']} ({veces})", False, colores_top[i])
+        texto_rect = texto.get_rect(center = (ancho / 2, 120 + i * 60))
+        pantalla.blit(texto, texto_rect)
+    
+    y_restantes = 280
+    max_mostrar = min(len(scores_actualizados), ultimo_score_posicion + 1) if ultimo_score_posicion is not None else len(scores_actualizados)
+    
+    pygame.draw.line(pantalla, (80, 80, 120), (50, 260), (ancho - 50, 260), 2)
+    
+    for i in range(3, max_mostrar):
+        score = scores_actualizados[i]
+        veces = score.get("veces", 1)
+        if i == ultimo_score_posicion:
+            color = (255, 100, 100)
+            fuente = fuente_normal
+        else:
+            color = (150, 150, 150)
+            fuente = fuente_chica
+        texto = fuente.render(f"{i+1}. {score['nombre']}: {score['puntos']} ({veces})", False, color)
+        pantalla.blit(texto, (ancho / 2 - 150, y_restantes))
+        y_restantes += 25
+    
+    instruccion = fuente_normal.render("Presiona ESC para volver", False, (150, 150, 150))
+    instruccion_rect = instruccion.get_rect(center = (ancho / 2, alto - 40))
+    pantalla.blit(instruccion, instruccion_rect)
+
+def mostrar_ingreso():
+    pantalla.fill((10, 10, 30))
+    
+    pygame.draw.rect(pantalla, (50, 50, 100), (ancho//2 - 250, alto//3, 500, 150), border_radius=20)
+    pygame.draw.rect(pantalla, (255, 215, 0), (ancho//2 - 250, alto//3, 500, 150), 4, border_radius=20)
+    
+    titulo = fuente_titulo.render("INGRESA TU NOMBRE", False, (255, 215, 0))
+    titulo_rect = titulo.get_rect(center = (ancho / 2, alto // 3 + 40))
+    pantalla.blit(titulo, titulo_rect)
+    
+    pygame.draw.rect(pantalla, (30, 30, 60), (ancho//2 - 150, alto//2 + 20, 300, 50), border_radius=10)
+    pygame.draw.rect(pantalla, (255, 255, 255), (ancho//2 - 150, alto//2 + 20, 300, 50), 3, border_radius=10)
+    
+    nombre_mostrar = nombre_jugador if len(nombre_jugador) > 0 else "_"
+    nombre_texto = fuente_titulo.render(nombre_mostrar, False, (255, 255, 100))
+    nombre_rect = nombre_texto.get_rect(center = (ancho / 2, alto // 2 + 45))
+    pantalla.blit(nombre_texto, nombre_rect)
+    
+    instruccion = fuente_chica.render("Presiona ENTER para comenzar", False, (150, 150, 150))
+    instruccion_rect = instruccion.get_rect(center = (ancho / 2, alto - 60))
+    pantalla.blit(instruccion, instruccion_rect)
 
 def tomar_foto():    
     colisiones = pygame.sprite.spritecollide(camara.sprite, astros_grupo, False)
@@ -258,24 +359,44 @@ def colision():
             return None
 
 def guardar_score(nombre, puntos):
+    global ultimo_score_posicion
     from datetime import date
     scores = []
-    with open('data/scores.json', 'r') as f:
+    with open('data/scores.json', 'r', encoding='utf-8') as f:
         datos = json.load(f)
         for item in datos["top_scores"]:
             scores.append(item)
     
-    nuevo_score = {
-        "nombre": nombre, 
-        "puntos": puntos, 
-        "fecha": str(date.today()),
-        "album": astros_encontrados.copy()
-    }
-    scores.append(nuevo_score)
-    scores.sort(key=lambda x: x["puntos"], reverse=True)
-    scores = scores[:5]
+    existente = None
+    for s in scores:
+        if s["nombre"] == nombre:
+            existente = s
+            break
     
-    with open('data/scores.json', 'w') as f:
+    if existente:
+        if puntos > existente["puntos"]:
+            existente["puntos"] = puntos
+            existente["album"] = astros_encontrados.copy()
+            existente["fecha"] = str(date.today())
+        existente["veces"] = existente.get("veces", 1) + 1
+    else:
+        nuevo_score = {
+            "nombre": nombre, 
+            "puntos": puntos, 
+            "fecha": str(date.today()),
+            "album": astros_encontrados.copy(),
+            "veces": 1
+        }
+        scores.append(nuevo_score)
+    
+    scores.sort(key=lambda x: x["puntos"], reverse=True)
+    
+    for i, s in enumerate(scores):
+        if s["nombre"] == nombre:
+            ultimo_score_posicion = i
+            break
+    
+    with open('data/scores.json', 'w', encoding='utf-8') as f:
         json.dump({"top_scores": scores}, f, indent=4)
 
 def mostrar_gameover():
@@ -291,33 +412,22 @@ def mostrar_gameover():
     
     pygame.draw.line(pantalla, (100, 100, 150), (50, 160), (ancho - 50, 160), 2)
     
-    album_imagenes = {}
-    asset_names = {
-        "Mercurio": "mercurio.png",
-        "Venus": "venus.png",
-        "Tierra": "tierra.png",
-        "Luna": "luna.png",
-        "Marte": "marte.png",
-        "Júpiter": "jupiter.png",
-        "Saturno": "saturno.png",
-        "Urano": "urano.png",
-        "Neptuno": "neptuno.png",
-        "Estrella": "estrella.png"
-    }
-    
     texto_info = {}
     for item in astros:
         texto_info[item["nombre"]] = item.get("texto", "")
     texto_info["Estrella"] = "Brilla en el cielo"
     
-    for nombre, archivo in asset_names.items():
-        try:
-            img = pygame.image.load(f"assets/Graphics/{archivo}").convert_alpha()
-            album_imagenes[nombre] = img
-        except:
-            pass
+    album_imagenes = {}
+    for nombre in IMAGENES_ASTROS:
+        album_imagenes[nombre] = IMAGENES_ASTROS[nombre]
     
     mostrar_album(astros_encontrados, album_imagenes, texto_info)
+    
+    pygame.draw.rect(pantalla, (50, 50, 100), (ancho//2 - 200, alto - 80, 400, 50), border_radius=10)
+    pygame.draw.rect(pantalla, (255, 255, 255), (ancho//2 - 200, alto - 80, 400, 50), 3, border_radius=10)
+    instruccion = fuente_normal.render("ENTER: Menu  |  R: Jugar de nuevo", False, (255, 255, 255))
+    instruccion_rect = instruccion.get_rect(center = (ancho / 2, alto - 55))
+    pantalla.blit(instruccion, instruccion_rect)
 
 def mostrar_album(lista_astros, album_img, info_texto, offset_y=180):
     cols = 5
@@ -348,24 +458,6 @@ def mostrar_album(lista_astros, album_img, info_texto, offset_y=180):
         info_label = fuente_chica.render(info, False, (150, 180, 220))
         info_rect = info_label.get_rect(center=(x + cell_width/2 - 5, y + 108))
         pantalla.blit(info_label, info_rect)
-        y = start_y + row * cell_height
-        
-        pygame.draw.rect(pantalla, (40, 40, 80), (x, y, cell_width - 10, cell_height - 10), border_radius=10)
-        
-        if nombre in album_imagenes:
-            img = pygame.transform.scale(album_imagenes[nombre], (70, 70))
-            img_x = x + (cell_width - 10 - 70) // 2
-            img_y = y + 10
-            pantalla.blit(img, (img_x, img_y))
-        
-        nombre_label = fuente_normal.render(nombre, False, (255, 255, 200))
-        nombre_rect = nombre_label.get_rect(center=(x + cell_width/2 - 5, y + 85))
-        pantalla.blit(nombre_label, nombre_rect)
-        
-        info = texto_info.get(nombre, "")[:20]
-        info_label = fuente_chica.render(info, False, (150, 180, 220))
-        info_rect = info_label.get_rect(center=(x + cell_width/2 - 5, y + 108))
-        pantalla.blit(info_label, info_rect)
     
     pygame.draw.line(pantalla, (100, 100, 150), (50, alto - 120), (ancho - 50, alto - 120), 2)
     
@@ -380,8 +472,12 @@ def mostrar_album(lista_astros, album_img, info_texto, offset_y=180):
 pygame.init()
 ancho = 1280
 alto = 720
+info = pygame.display.Info()
+ancho = info.current_w
+alto = info.current_h
 centro = (ancho //2, alto // 2)
-pantalla = pygame.display.set_mode((ancho, alto))
+pantalla = pygame.display.set_mode((ancho, alto), pygame.FULLSCREEN)
+cargar_imagenes()
 pygame.display.set_caption("ArcSpace")
 clock = pygame.time.Clock()
 fuente_titulo = pygame.font.Font("assets/Fonts/Silkscreen/Silkscreen-Regular.ttf", 80)
@@ -392,36 +488,35 @@ ESTADO_MENU = "menu"
 ESTADO_JUGANDO = "jugando"
 ESTADO_REPORTE = "reporte"
 ESTADO_GAMEOVER = "gameover"
+ESTADO_SCORES = "scores"
+ESTADO_INGRESO = "ingreso"
 
 # Estado inicial
 estado_actual = ESTADO_MENU
 nombre_jugador = ""
 input_activo = False
+ultimo_score_posicion = None
+scroll_offset = 0
 
 #Menu
-img_up = pygame.image.load("assets/Graphics/Keyboard & Mouse/Default/keyboard_arrow_up.png").convert_alpha()
-img_down = pygame.image.load("assets/Graphics/Keyboard & Mouse/Default/keyboard_arrow_down.png").convert_alpha()
-img_left = pygame.image.load("assets/Graphics/Keyboard & Mouse/Default/keyboard_arrow_left.png").convert_alpha()
-img_right = pygame.image.load("assets/Graphics/Keyboard & Mouse/Default/keyboard_arrow_right.png").convert_alpha()
-img_space = pygame.image.load("assets/Graphics/Keyboard & Mouse/Double/keyboard_space.png").convert_alpha()
 datos_teclas = [
-    {"img": img_up, "offset": (0, -50)},   
-    {"img": img_down, "offset": (0, 0)},  
-    {"img": img_left, "offset": (-50, 0)},  
-    {"img": img_right, "offset": (50, 0)},
-    {"img": img_space, "offset": (250, -5)}   
+    {"img": IMAGENES_TECLAS["up"], "offset": (0, -50)},   
+    {"img": IMAGENES_TECLAS["down"], "offset": (0, 0)},  
+    {"img": IMAGENES_TECLAS["left"], "offset": (-50, 0)},  
+    {"img": IMAGENES_TECLAS["right"], "offset": (50, 0)},
+    {"img": IMAGENES_TECLAS["space"], "offset": (250, -5)}   
     ]
 
 #Mostrar scores
 scores = []
-with open('data/scores.json', 'r') as f:
+with open('data/scores.json', 'r', encoding='utf-8') as f:
     datos = json.load(f)
     for item in datos["top_scores"]:
         scores.append(item)
 
 #Juego
 fotos = 5
-tiempo_juego = 15000
+tiempo_juego = 10000
 tiempo_restante = tiempo_juego
 puntos = 0
 astros_encontrados = []
@@ -436,7 +531,7 @@ pygame.time.set_timer(EVENTO_NUEVO_ASTRO, 5000)
 
 #Astros
 astros = []
-with open("data/astros.json", "r") as f:
+with open("data/astros.json", "r", encoding="utf-8") as f:
     datos = json.load(f)
     for item in datos["astros"]:
         astros.append(item)
@@ -454,50 +549,25 @@ while True:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     mouse_pos = event.pos
-                    ancla = (ancho / 1.38, alto / 14)
-                    offset = (0, 50)
-                    posicion_final = list(tuple(a + b for a, b in zip(ancla, offset)))
-                    for i in range(len(scores_actualizados)):
-                        score_surf = fuente_normal.render(f'{scores_actualizados[i]["nombre"]}: {scores_actualizados[i]["puntos"]}', False, (255, 0, 0))
-                        score_rect = score_surf.get_rect(topleft = posicion_final)
-                        if score_rect.collidepoint(mouse_pos):
-                            score_seleccionado = i
-                            album_mostrado = True
-                            break
-                        posicion_final[1] += 50
+                    if BOTON_SCORES and BOTON_SCORES["x"] <= mouse_pos[0] <= BOTON_SCORES["x"] + BOTON_SCORES["ancho"] and BOTON_SCORES["y"] <= mouse_pos[1] <= BOTON_SCORES["y"] + BOTON_SCORES["alto"]:
+                        estado_actual = ESTADO_SCORES
+                    elif BOTON_SALIR and BOTON_SALIR["x"] <= mouse_pos[0] <= BOTON_SALIR["x"] + BOTON_SALIR["ancho"] and BOTON_SALIR["y"] <= mouse_pos[1] <= BOTON_SALIR["y"] + BOTON_SALIR["alto"]:
+                        pygame.quit()
+                        exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP:
-                    score_seleccionado = max(0, score_seleccionado - 1)
-                    album_mostrado = False
-                elif event.key == pygame.K_DOWN:
-                    max_scores = len(scores_actualizados) if 'scores_actualizados' in dir() else 0
-                    score_seleccionado = min(max_scores - 1 if max_scores > 0 else 0, score_seleccionado + 1)
-                    album_mostrado = False
-                elif event.key == pygame.K_RETURN:
-                    if scores_actualizados and score_seleccionado < len(scores_actualizados):
-                        album_score = scores_actualizados[score_seleccionado]
-                        if "album" in album_score:
-                            astros_encontrados = album_score["album"].copy()
-                elif event.key == pygame.K_SPACE:
-                    estado_actual = ESTADO_JUGANDO
-                    tiempo_restante = tiempo_juego
-                    puntos = 0
+                if event.key == pygame.K_SPACE:
                     nombre_jugador = ""
-                    astros_encontrados.clear()
-                    album_mostrado = False
-                    astros_grupo = pygame.sprite.Group()
-                    for astro in astros:
-                        astros_grupo.add(Astro(astro))
-                    for _ in range(9):
-                        astros_grupo.add(Astro({"nombre": "Estrella", "puntos": 50, "texto": "Brilla"}))
+                    estado_actual = ESTADO_INGRESO
         
         elif estado_actual == 'jugando':
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                 astro_encontrado = tomar_foto()
                 if astro_encontrado:
                     if astro_encontrado.nombre == "Estrella":
-                        tiempo_restante += 3000
+                        tiempo_restante = min(tiempo_restante + 3000, 10000)
                     agregar_puntos(100 if astro_encontrado.nombre != "Estrella" else 50)
+                else:
+                    tiempo_restante = max(tiempo_restante - 1000, 0)
             
             if tiempo_restante <= 0:
                 estado_actual = ESTADO_GAMEOVER
@@ -507,19 +577,56 @@ while True:
         
         elif estado_actual == ESTADO_GAMEOVER:
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_BACKSPACE:
-                    nombre_jugador = nombre_jugador[:-1]
-                elif event.key == pygame.K_RETURN and len(nombre_jugador) > 0:
+                if event.key == pygame.K_r:
+                    tiempo_restante = tiempo_juego
+                    puntos = 0
+                    astros_encontrados.clear()
+                    album_mostrado = False
+                    astros_grupo = pygame.sprite.Group()
+                    for astro in astros:
+                        astros_grupo.add(Astro(astro))
+                    for _ in range(9):
+                        astros_grupo.add(Astro({"nombre": "Estrella", "puntos": 50, "texto": "Brilla"}))
+                    estado_actual = ESTADO_JUGANDO
+                elif event.key == pygame.K_RETURN:
                     guardar_score(nombre_jugador, puntos)
                     nombre_jugador = ""
                     estado_actual = ESTADO_MENU
+        
+        elif estado_actual == ESTADO_INGRESO:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_BACKSPACE:
+                    nombre_jugador = nombre_jugador[:-1]
+                elif event.key == pygame.K_RETURN and len(nombre_jugador) > 0:
+                    estado_actual = ESTADO_JUGANDO
+                    tiempo_restante = tiempo_juego
+                    puntos = 0
+                    astros_encontrados.clear()
+                    album_mostrado = False
+                    astros_grupo = pygame.sprite.Group()
+                    for astro in astros:
+                        astros_grupo.add(Astro(astro))
+                    for _ in range(9):
+                        astros_grupo.add(Astro({"nombre": "Estrella", "puntos": 50, "texto": "Brilla"}))
+                elif event.key == pygame.K_ESCAPE:
+                    estado_actual = ESTADO_MENU
                 elif len(nombre_jugador) < 10:
                     char = pygame.key.name(event.key)
-                    if char.isalnum():
+                    if char.isalpha():
                         nombre_jugador += char.upper()
+        
+        elif estado_actual == ESTADO_SCORES:
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                estado_actual = ESTADO_MENU
     
     if estado_actual == 'menu':
         mostrar_menu()
+    
+    if estado_actual == ESTADO_SCORES:
+        mostrar_scores()
+    
+    if estado_actual == ESTADO_INGRESO:
+        mostrar_ingreso()
     
     if estado_actual == 'gameover':
         mostrar_gameover()
@@ -536,10 +643,48 @@ while True:
             tiempo_restante = 0
             estado_actual = ESTADO_GAMEOVER
         
-        timer_texto = fuente_normal.render(f"Tiempo: {tiempo_restante // 1000}s", False, (255, 255, 255))
+        proporcion = tiempo_restante / tiempo_juego
+        barra_alto = 30
+        barra_y = alto - barra_alto - 10
+        barra_x = 10
+        barra_ancho = ancho - 20
+        
+        pygame.draw.rect(pantalla, (50, 50, 50), (barra_x, barra_y, barra_ancho, barra_alto), border_radius=8)
+        pygame.draw.rect(pantalla, (100, 100, 100), (barra_x, barra_y, barra_ancho, barra_alto), 3, border_radius=8)
+        
+        if proporcion > 0.5:
+            color_barra = (100, 255, 100)
+        elif proporcion > 0.25:
+            color_barra = (255, 200, 50)
+        else:
+            color_barra = (255, 100, 100)
+        
+        pygame.draw.rect(pantalla, color_barra, (barra_x + 5, barra_y + 5, int((barra_ancho - 10) * proporcion), barra_alto - 10), border_radius=5)
+        
         puntos_texto = fuente_normal.render(f"Puntos: {puntos}", False, (255, 255, 255))
-        pantalla.blit(timer_texto, (20, 20))
-        pantalla.blit(puntos_texto, (20, 60))
+        pantalla.blit(puntos_texto, (20, 20))
+        
+        scores_juego = []
+        with open('data/scores.json', 'r', encoding='utf-8') as f:
+            datos = json.load(f)
+            for item in datos["top_scores"]:
+                scores_juego.append(item)
+        
+        colores_top = [(255, 215, 0), (192, 192, 192), (205, 127, 50)]
+        
+        pygame.draw.rect(pantalla, (0, 0, 0, 150), (ancho - 250, 10, 240, min(len(scores_juego), 10) * 18 + 20), border_radius=10)
+        
+        y_scores = 20
+        for i, score in enumerate(scores_juego[:10]):
+            if i < 3:
+                color = colores_top[i]
+                fuente = fuente_normal
+            else:
+                color = (180, 180, 180)
+                fuente = fuente_chica
+            score_texto = fuente.render(f"{i+1}. {score['nombre']}: {score['puntos']}", False, color)
+            pantalla.blit(score_texto, (ancho - 230, y_scores))
+            y_scores += 18
         
         camara.draw(pantalla)
         camara.update()

@@ -2,88 +2,21 @@
     "top_scores": [
         {
             "nombre": "MARCOS",
-            "puntos": 2100,
+            "puntos": 1700,
             "fecha": "2026-05-04",
             "album": [
-                "Venus",
-                "Luna",
-                "Neptuno",
-                "Estrella",
-                "Tierra",
-                "Urano",
-                "Saturno",
                 "Mercurio",
+                "J\u00fapiter",
+                "Estrella",
+                "Urano",
+                "Luna",
+                "Saturno",
+                "Tierra",
                 "Marte",
-                "J\u00c3\u00bapiter"
-            ]
-        },
-        {
-            "nombre": "MARCOS",
-            "puntos": 2000,
-            "fecha": "2026-05-04",
-            "album": [
-                "Urano",
-                "Estrella",
-                "Marte",
-                "Venus",
-                "Tierra",
-                "Luna",
-                "Mercurio",
-                "J\u00c3\u00bapiter",
-                "Saturno",
-                "Neptuno"
-            ]
-        },
-        {
-            "nombre": "MARCOS",
-            "puntos": 1850,
-            "fecha": "2026-05-04",
-            "album": [
-                "Estrella",
-                "Tierra",
-                "Luna",
-                "Saturno",
-                "Urano",
                 "Neptuno",
-                "Mercurio",
-                "Venus",
-                "Marte",
-                "J\u00c3\u00bapiter"
-            ]
-        },
-        {
-            "nombre": "MARCOS",
-            "puntos": 1600,
-            "fecha": "2026-05-04",
-            "album": [
-                "Estrella",
-                "Luna",
-                "Tierra",
-                "Mercurio",
-                "Saturno",
-                "J\u00c3\u00bapiter",
-                "Neptuno",
-                "Venus",
-                "Urano",
-                "Marte"
-            ]
-        },
-        {
-            "nombre": "MARCOS",
-            "puntos": 1350,
-            "fecha": "2026-05-04",
-            "album": [
-                "Tierra",
-                "Mercurio",
-                "Marte",
-                "Venus",
-                "Urano",
-                "Luna",
-                "Neptuno",
-                "Estrella",
-                "Saturno",
-                "J\u00c3\u00bapiter"
-            ]
+                "Venus"
+            ],
+            "veces": 1
         }
     ]
 }
