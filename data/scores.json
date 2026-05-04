@@ -1,7 +1,55 @@
 {
     "top_scores": [
-        {"nombre": "GEMI", "puntos": 2500, "fecha": "2026-04-20"},
-        {"nombre": "ARC", "puntos": 1800, "fecha": "2026-04-21"},
-        {"nombre": "LUCAS 2B", "puntos": 1500, "fecha": "2026-04-22"}
+        {
+            "nombre": "MARCOS",
+            "puntos": 2100,
+            "fecha": "2026-05-04",
+            "album": [
+                "Venus",
+                "Luna",
+                "Neptuno",
+                "Estrella",
+                "Tierra",
+                "Urano",
+                "Saturno",
+                "Mercurio",
+                "Marte",
+                "J\u00c3\u00bapiter"
+            ]
+        },
+        {
+            "nombre": "MARCOS",
+            "puntos": 2000,
+            "fecha": "2026-05-04",
+            "album": [
+                "Urano",
+                "Estrella",
+                "Marte",
+                "Venus",
+                "Tierra",
+                "Luna",
+                "Mercurio",
+                "J\u00c3\u00bapiter",
+                "Saturno",
+                "Neptuno"
+            ]
+        },
+        {
+            "nombre": "MARCOS",
+            "puntos": 1850,
+            "fecha": "2026-05-04",
+            "album": [
+                "Estrella",
+                "Tierra",
+                "Luna",
+                "Saturno",
+                "Urano",
+                "Neptuno",
+                "Mercurio",
+                "Venus",
+                "Marte",
+                "J\u00c3\u00bapiter"
+            ]
+        }
     ]
 }

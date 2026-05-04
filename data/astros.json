@@ -1,13 +1,13 @@
 {
     "astros": [
-        {"nombre": "Luna", "puntos": 100, "texto": "Es blanca"},
-        {"nombre": "Marte", "puntos": 200, "texto": "Es rojo"},
-        {"nombre": "Saturno", "puntos": 300, "texto": "Tiene Anillos"},
-        {"nombre": "Luna", "puntos": 100, "texto": "Es blanca"},
-        {"nombre": "Marte", "puntos": 200, "texto": "Es rojo"},
-        {"nombre": "Saturno", "puntos": 300, "texto": "Tiene Anillos"},
-        {"nombre": "Luna", "puntos": 100, "texto": "Es blanca"},
-        {"nombre": "Marte", "puntos": 200, "texto": "Es rojo"},
-        {"nombre": "Saturno", "puntos": 300, "texto": "Tiene Anillos"}
+        {"nombre": "Mercurio", "puntos": 100, "texto": "El más pequeño"},
+        {"nombre": "Venus", "puntos": 100, "texto": "El más caliente"},
+        {"nombre": "Tierra", "puntos": 100, "texto": "Nuestro hogar"},
+        {"nombre": "Luna", "puntos": 100, "texto": "Satélite natural"},
+        {"nombre": "Marte", "puntos": 200, "texto": "El planeta rojo"},
+        {"nombre": "Júpiter", "puntos": 300, "texto": "Gigante gaseoso"},
+        {"nombre": "Saturno", "puntos": 300, "texto": "Anillos únicos"},
+        {"nombre": "Urano", "puntos": 400, "texto": "Gira de lado"},
+        {"nombre": "Neptuno", "puntos": 400, "texto": "Muy frío y azul"}
     ]
 }
