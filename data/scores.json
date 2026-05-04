@@ -50,6 +50,40 @@
                 "Marte",
                 "J\u00c3\u00bapiter"
             ]
+        },
+        {
+            "nombre": "MARCOS",
+            "puntos": 1600,
+            "fecha": "2026-05-04",
+            "album": [
+                "Estrella",
+                "Luna",
+                "Tierra",
+                "Mercurio",
+                "Saturno",
+                "J\u00c3\u00bapiter",
+                "Neptuno",
+                "Venus",
+                "Urano",
+                "Marte"
+            ]
+        },
+        {
+            "nombre": "MARCOS",
+            "puntos": 1350,
+            "fecha": "2026-05-04",
+            "album": [
+                "Tierra",
+                "Mercurio",
+                "Marte",
+                "Venus",
+                "Urano",
+                "Luna",
+                "Neptuno",
+                "Estrella",
+                "Saturno",
+                "J\u00c3\u00bapiter"
+            ]
         }
     ]
 }
